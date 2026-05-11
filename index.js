@@ -1,21 +1,26 @@
 const mineflayer = require('mineflayer')
 
-function createBot() {
+function startBot() {
 
 const bot = mineflayer.createBot({
     host: 'maincraftandme.aternos.me',
-    port: 29449,
+    port: 25565,
     username: 'AFK_Bot',
-    auth: 'offline'
+    auth: 'offline',
+    version: false,
+    keepAlive: true,
+    checkTimeoutInterval: 120000
 })
 
 bot.on('spawn', () => {
-    console.log('Bot joined')
+    console.log('Bot joined successfully')
 
     setInterval(() => {
 
+        // Rotate head randomly
         bot.look(Math.random() * Math.PI * 2, 0, true)
 
+        // Small anti-afk movement
         bot.setControlState('jump', true)
 
         setTimeout(() => {
@@ -26,11 +31,17 @@ bot.on('spawn', () => {
 })
 
 bot.on('end', () => {
-    console.log('Disconnected, reconnecting...')
-    setTimeout(createBot, 5000)
+    console.log('Disconnected. Reconnecting in 10 seconds...')
+    setTimeout(startBot, 10000)
 })
 
-bot.on('error', err => console.log(err))
+bot.on('kicked', reason => {
+    console.log('Kicked:', reason)
+})
+
+bot.on('error', err => {
+    console.log('Error:', err)
+})
 }
 
-createBot()
+startBot()
