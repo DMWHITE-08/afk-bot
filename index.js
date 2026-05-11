@@ -4,7 +4,7 @@ function createBot() {
 
 const bot = mineflayer.createBot({
     host: 'maincraftandme.aternos.me',
-    port: 25565,
+    port: 29449,
     username: 'AFK_Bot',
     auth: 'offline'
 })
