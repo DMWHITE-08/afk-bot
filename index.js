@@ -4,7 +4,7 @@ function createBot() {
 
 const bot = mineflayer.createBot({
     host: 'maincraftandme.aternos.me',
-    port: 29449,
+    port: 25565,
     username: 'AFK_Bot',
     auth: 'offline'
 })
@@ -14,15 +14,13 @@ bot.on('spawn', () => {
 
     setInterval(() => {
 
-        const actions = ['forward', 'back', 'left', 'right']
-        const action = actions[Math.floor(Math.random() * actions.length)]
+        bot.look(Math.random() * Math.PI * 2, 0, true)
 
-        bot.setControlState(action, true)
         bot.setControlState('jump', true)
 
         setTimeout(() => {
-            bot.clearControlStates()
-        }, 2000)
+            bot.setControlState('jump', false)
+        }, 500)
 
     }, 10000)
 })
