@@ -4,7 +4,7 @@ function startBot() {
 
 const bot = mineflayer.createBot({
     host: 'maincraftandme.aternos.me',
-    port: 25565,
+    port: 29449,
     username: 'AFK_Bot',
     auth: 'offline',
     version: false,
@@ -17,21 +17,37 @@ bot.on('spawn', () => {
 
     setInterval(() => {
 
-        // Rotate head randomly
-        bot.look(Math.random() * Math.PI * 2, 0, true)
-
-        // Small anti-afk movement
-        bot.setControlState('jump', true)
+        // Move forward
+        bot.setControlState('forward', true)
 
         setTimeout(() => {
-            bot.setControlState('jump', false)
-        }, 500)
 
-    }, 10000)
+            bot.setControlState('forward', false)
+
+            // Move backward
+            bot.setControlState('back', true)
+
+            setTimeout(() => {
+
+                bot.setControlState('back', false)
+
+                // Small jump
+                bot.setControlState('jump', true)
+
+                setTimeout(() => {
+                    bot.setControlState('jump', false)
+                }, 500)
+
+            }, 2000)
+
+        }, 2000)
+
+    }, 8000)
+
 })
 
 bot.on('end', () => {
-    console.log('Disconnected. Reconnecting in 10 seconds...')
+    console.log('Disconnected. Reconnecting in 10s...')
     setTimeout(startBot, 10000)
 })
 
