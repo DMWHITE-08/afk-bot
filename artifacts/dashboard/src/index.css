@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* BotForge Dark Cockpit Theme */
+  --background: hsl(224 50% 6%);   /* deep navy */
+  --primary:    hsl(172 90% 45%);  /* electric cyan-green */
+  --destructive: hsl(350 85% 55%); /* amber-red */
+  --font-mono: "Space Mono", "Fira Code", monospace;
+  --font-sans: "Space Grotesk", "Inter", sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--background);
+  color: #e0e0e0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code, pre {
+  font-family: var(--font-mono);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(172 90% 45% / 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(172 90% 45% / 0.7);
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Focus styles */
+input:focus, button:focus, textarea:focus {
+  outline: none;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
