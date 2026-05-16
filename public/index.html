@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minecraft Bot Console</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            mc: {
+              green: '#5aff5a',
+              red: '#ff5a5a',
+              yellow: '#ffff5a',
+              blue: '#5a5aff',
+              gray: '#1a1a2e',
+              panel: '#16213e',
+              border: '#0f3460',
+              accent: '#e94560',
+            }
+          },
+          fontFamily: {
+            mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'JetBrains Mono', monospace; }
+    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: #1a1a2e; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #0f3460; border-radius: 2px; }
+    .pulse-dot { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .tab-active { border-bottom: 2px solid #e94560; color: #e94560; }
+    .tab-inactive { border-bottom: 2px solid transparent; color: #6b7280; }
+    .tab-inactive:hover { color: #9ca3af; }
+    .btn { transition: all 0.15s ease; }
+    .btn:active { transform: scale(0.97); }
+    .sse-cursor::after { content: '▋'; animation: blink 1s step-end infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+  </style>
+</head>
+<body class="bg-mc-gray text-gray-100 min-h-screen">
+
+<!-- ─── Header ─────────────────────────────────────────────────────────────── -->
+<header class="bg-mc-panel border-b border-mc-border px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+  <div class="flex items-center gap-3">
+    <span class="text-2xl">⛏️</span>
+    <h1 class="text-lg font-bold text-white tracking-wide">Minecraft Bot Console</h1>
+  </div>
+  <div class="flex items-center gap-4">
+    <div id="ws-indicator" class="flex items-center gap-2 text-xs text-gray-400">
+      <span class="w-2 h-2 rounded-full bg-gray-500 pulse-dot" id="ws-dot"></span>
+      <span id="ws-label">Connecting…</span>
+    </div>
+    <div id="bot-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-700 text-gray-400">OFFLINE</div>
+  </div>
+</header>
+
+<!-- ─── Tab bar ────────────────────────────────────────────────────────────── -->
+<nav class="bg-mc-panel border-b border-mc-border px-6 flex gap-6">
+  <button class="tab-btn tab-active py-3 text-sm font-medium" data-tab="dashboard">Dashboard</button>
+  <button class="tab-btn tab-inactive py-3 text-sm font-medium" data-tab="chat">Chat</button>
+  <button class="tab-btn tab-inactive py-3 text-sm font-medium" data-tab="controls">Controls</button>
+  <button class="tab-btn tab-inactive py-3 text-sm font-medium" data-tab="settings">Settings</button>
+  <button class="tab-btn tab-inactive py-3 text-sm font-medium" data-tab="ai">AI Chat</button>
+</nav>
+
+<!-- ─── Main content ───────────────────────────────────────────────────────── -->
+<main class="p-6 max-w-7xl mx-auto">
+
+  <!-- ══ DASHBOARD TAB ══════════════════════════════════════════════════════ -->
+  <div id="tab-dashboard" class="tab-content">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <!-- Status card -->
+      <div class="bg-mc-panel border border-mc-border rounded-lg p-4">
+        <div class="text-xs text-gray-400 mb-1 uppercase tracking-wider">Status</div>
+        <div id="stat-status" class="text-2xl font-bold text-gray-400">Offline</div>
+      </div>
+      <!-- Health card -->
+      <div class="bg-mc-panel border border-mc-border rounded-lg p-4">
+        <div class="text-xs text-gray-400 mb-1 uppercase tracking-wider">❤️ Health</div>
+        <div id="stat-health" class="text-2xl font-bold text-gray-300">—</div>
+        <div class="mt-2 h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div id="health-bar" class="h-full bg-mc-red rounded-full transition-all" style="width:0%"></div>
+        </div>
+      </div>
+      <!-- Food card -->
+      <div class="bg-mc-panel border border-mc-border rounded-lg p-4">
+        <div class="text-xs text-gray-400 mb-1 uppercase tracking-wider">🍖 Food</div>
+        <div id="stat-food" class="text-2xl font-bold text-gray-300">—</div>
+        <div class="mt-2 h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div id="food-bar" class="h-full bg-yellow-500 rounded-full transition-all" style="width:0%"></div>
+        </div>
+      </div>
+      <!-- Ping card -->
+      <div class="bg-mc-panel border border-mc-border rounded-lg p-4">
+        <div class="text-xs text-gray-400 mb-1 uppercase tracking-wider">📡 Ping</div>
+        <div id="stat-ping" class="text-2xl font-bold text-gray-300">—</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <!-- Position -->
+      <div class="bg-mc-panel border border-mc-border rounded-lg p-4">
+        <div class="text-xs text-gray-400 mb-2 uppercase tracking-wider">📍 Position</div>
+        <div id="stat-position" class="font-mono text-mc-green text-sm">—</div>
+        <div class="mt-1 text-xs text-gray-500">
+          Dimension: <span id="stat-dimension" class="text-gray-300">—</span>
+          &nbsp;|&nbsp; Mode: <span id="stat-gamemode" class="text-gray-300">—</span>
+        </div>
+      </div>
+      <!-- Uptime -->
+      <div class="bg-mc-panel border border-mc-border rounded-lg p-4">
+        <div class="text-xs text-gray-400 mb-2 uppercase tracking-wider">⏱ Uptime</div>
+        <div id="stat-uptime" class="text-2xl font-bold text-gray-300">—</div>
+        <div class="mt-1 text-xs text-gray-500">
+          Server: <span id="stat-server" class="text-gray-300">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bot controls -->
+    <div class="bg-mc-panel border border-mc-border rounded-lg p-4">
+      <div class="text-xs text-gray-400 mb-3 uppercase tracking-wider">Bot Control</div>
+      <div class="flex flex-wrap gap-3">
+        <button id="btn-start" class="btn px-5 py-2 bg-mc-green text-black font-bold rounded hover:opacity-90 disabled:opacity-40" onclick="startBot()">▶ Start Bot</button>
+        <button id="btn-stop" class="btn px-5 py-2 bg-mc-red text-white font-bold rounded hover:opacity-90 disabled:opacity-40" onclick="stopBot()">■ Stop Bot</button>
+        <button id="btn-afk" class="btn px-5 py-2 bg-mc-blue text-white font-bold rounded hover:opacity-90" onclick="toggleAfk()">🔄 AFK: OFF</button>
+      </div>
+      <div id="action-msg" class="mt-3 text-xs text-gray-400 hidden"></div>
+    </div>
+  </div>
+
+  <!-- ══ CHAT TAB ═══════════════════════════════════════════════════════════ -->
+  <div id="tab-chat" class="tab-content hidden">
+    <div class="bg-mc-panel border border-mc-border rounded-lg flex flex-col" style="height: calc(100vh - 220px)">
+      <div class="px-4 py-3 border-b border-mc-border text-xs text-gray-400 uppercase tracking-wider">Chat Log</div>
+      <div id="chat-log" class="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-thin font-mono text-sm"></div>
+      <div class="p-4 border-t border-mc-border flex gap-2">
+        <input id="chat-input" type="text" placeholder="Send a message to the server…"
+          class="flex-1 bg-gray-800 border border-mc-border rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-mc-accent"
+          onkeydown="if(event.key==='Enter') sendChat()" />
+        <button class="btn px-4 py-2 bg-mc-accent text-white font-bold rounded hover:opacity-90 text-sm" onclick="sendChat()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CONTROLS TAB ═══════════════════════════════════════════════════════ -->
+  <div id="tab-controls" class="tab-content hidden">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Movement pad -->
+      <div class="bg-mc-panel border border-mc-border rounded-lg p-6">
+        <div class="text-xs text-gray-400 mb-4 uppercase tracking-wider">Movement</div>
+        <div class="grid grid-cols-3 gap-2 w-48 mx-auto">
+          <div></div>
+          <button class="btn bg-gray-700 hover:bg-gray-600 rounded p-3 text-center font-bold" onclick="control('forward')">▲</button>
+          <div></div>
+          <button class="btn bg-gray-700 hover:bg-gray-600 rounded p-3 text-center font-bold" onclick="control('left')">◄</button>
+          <button class="btn bg-gray-700 hover:bg-gray-600 rounded p-3 text-center font-bold text-mc-red" onclick="control('stop')">■</button>
+          <button class="btn bg-gray-700 hover:bg-gray-600 rounded p-3 text-center font-bold" onclick="control('right')">►</button>
+          <div></div>
+          <button class="btn bg-gray-700 hover:bg-gray-600 rounded p-3 text-center font-bold" onclick="control('back')">▼</button>
+          <div></div>
+        </div>
+        <div class="flex gap-2 mt-4 justify-center">
+          <button class="btn bg-gray-700 hover:bg-gray-600 rounded px-4 py-2 text-sm font-bold" onclick="control('jump', 400)">Jump</button>
+          <button class="btn bg-gray-700 hover:bg-gray-600 rounded px-4 py-2 text-sm font-bold" onclick="control('sneak', 1000)">Sneak</button>
+          <button class="btn bg-gray-700 hover:bg-gray-600 rounded px-4 py-2 text-sm font-bold" onclick="control('sprint', 2000)">Sprint</button>
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="bg-mc-panel border border-mc-border rounded-lg p-6">
+        <div class="text-xs text-gray-400 mb-4 uppercase tracking-wider">Quick Actions</div>
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs text-gray-400 block mb-1">Custom duration (ms)</label>
+            <input id="ctrl-duration" type="number" value="500" min="100" max="10000"
+              class="w-full bg-gray-800 border border-mc-border rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-mc-accent" />
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button class="btn bg-gray-700 hover:bg-gray-600 rounded px-3 py-2 text-sm" onclick="controlCustom('forward')">Forward (custom)</button>
+            <button class="btn bg-gray-700 hover:bg-gray-600 rounded px-3 py-2 text-sm" onclick="controlCustom('back')">Back (custom)</button>
+            <button class="btn bg-gray-700 hover:bg-gray-600 rounded px-3 py-2 text-sm" onclick="controlCustom('left')">Left (custom)</button>
+            <button class="btn bg-gray-700 hover:bg-gray-600 rounded px-3 py-2 text-sm" onclick="controlCustom('right')">Right (custom)</button>
+          </div>
+          <div class="pt-2 border-t border-mc-border">
+            <label class="text-xs text-gray-400 block mb-1">Send chat message</label>
+            <div class="flex gap-2">
+              <input id="ctrl-chat" type="text" placeholder="/gamemode creative"
+                class="flex-1 bg-gray-800 border border-mc-border rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-mc-accent"
+                onkeydown="if(event.key==='Enter') sendChatFromControl()" />
+              <button class="btn px-3 py-2 bg-mc-accent text-white rounded text-sm font-bold" onclick="sendChatFromControl()">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SETTINGS TAB ═══════════════════════════════════════════════════════ -->
+  <div id="tab-settings" class="tab-content hidden">
+    <div class="bg-mc-panel border border-mc-border rounded-lg p-6 max-w-2xl">
+      <div class="text-xs text-gray-400 mb-4 uppercase tracking-wider">Bot Settings</div>
+      <form id="settings-form" class="space-y-4" onsubmit="saveSettings(event)">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs text-gray-400 block mb-1">Server IP</label>
+            <input name="serverIp" type="text" class="w-full bg-gray-800 border border-mc-border rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-mc-accent" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 block mb-1">Server Port</label>
+            <input name="serverPort" type="number" class="w-full bg-gray-800 border border-mc-border rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-mc-accent" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 block mb-1">Username</label>
+            <input name="username" type="text" class="w-full bg-gray-800 border border-mc-border rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-mc-accent" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 block mb-1">Auth Mode</label>
+            <select name="auth" class="w-full bg-gray-800 border border-mc-border rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-mc-accent">
+              <option value="offline">Offline</option>
+              <option value="microsoft">Microsoft</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 block mb-1">Reconnect Delay (ms)</label>
+            <input name="reconnectDelay" type="number" class="w-full bg-gray-800 border border-mc-border rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-mc-accent" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 block mb-1">Random Chat Interval (ms)</label>
+            <input name="randomChatInterval" type="number" class="w-full bg-gray-800 border border-mc-border rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-mc-accent" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input name="autoReconnect" type="checkbox" class="w-4 h-4 accent-mc-accent" />
+            <span class="text-sm">Auto Reconnect</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input name="antiAfk" type="checkbox" class="w-4 h-4 accent-mc-accent" />
+            <span class="text-sm">Anti-AFK</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input name="antiKick" type="checkbox" class="w-4 h-4 accent-mc-accent" />
+            <span class="text-sm">Anti-Kick</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input name="combatEnabled" type="checkbox" class="w-4 h-4 accent-mc-accent" />
+            <span class="text-sm">Combat</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input name="sleepAtNight" type="checkbox" class="w-4 h-4 accent-mc-accent" />
+            <span class="text-sm">Sleep at Night</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input name="randomChatEnabled" type="checkbox" class="w-4 h-4 accent-mc-accent" />
+            <span class="text-sm">Random Chat</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input name="avoidWater" type="checkbox" class="w-4 h-4 accent-mc-accent" />
+            <span class="text-sm">Avoid Water</span>
+          </label>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button type="submit" class="btn px-5 py-2 bg-mc-accent text-white font-bold rounded hover:opacity-90 text-sm">Save Settings</button>
+          <button type="button" class="btn px-5 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 text-sm" onclick="loadSettings()">Reset</button>
+        </div>
+        <div id="settings-msg" class="text-xs text-gray-400 hidden"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══ AI CHAT TAB ════════════════════════════════════════════════════════ -->
+  <div id="tab-ai" class="tab-content hidden">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" style="height: calc(100vh - 220px)">
+      <!-- Conversation list -->
+      <div class="bg-mc-panel border border-mc-border rounded-lg flex flex-col">
+        <div class="px-4 py-3 border-b border-mc-border flex items-center justify-between">
+          <span class="text-xs text-gray-400 uppercase tracking-wider">Conversations</span>
+          <button class="btn text-xs px-2 py-1 bg-mc-accent text-white rounded hover:opacity-90" onclick="newConversation()">+ New</button>
+        </div>
+        <div id="conv-list" class="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-1"></div>
+      </div>
+
+      <!-- Chat area -->
+      <div class="md:col-span-2 bg-mc-panel border border-mc-border rounded-lg flex flex-col">
+        <div class="px-4 py-3 border-b border-mc-border flex items-center justify-between">
+          <span id="conv-title" class="text-sm font-medium text-gray-300">Select a conversation</span>
+          <button id="btn-del-conv" class="btn text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded hover:bg-mc-red hover:text-white hidden" onclick="deleteConversation()">Delete</button>
+        </div>
+        <div id="ai-messages" class="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin text-sm"></div>
+        <div class="p-4 border-t border-mc-border flex gap-2">
+          <input id="ai-input" type="text" placeholder="Ask GPT-4o anything…"
+            class="flex-1 bg-gray-800 border border-mc-border rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-mc-accent"
+            onkeydown="if(event.key==='Enter') sendAiMessage()" />
+          <button id="btn-ai-send" class="btn px-4 py-2 bg-mc-accent text-white font-bold rounded hover:opacity-90 text-sm" onclick="sendAiMessage()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let ws = null
+let wsReconnectTimer = null
+let botOnline = false
+let afkEnabled = false
+let currentConvId = null
+let conversations = []
+let uptimeInterval = null
+let uptimeStart = null
+
+// ─── WebSocket ────────────────────────────────────────────────────────────────
+function connectWs() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws'
+  ws = new WebSocket(`${proto}://${location.host}/ws`)
+
+  ws.onopen = () => {
+    setWsStatus(true)
+    clearTimeout(wsReconnectTimer)
+  }
+
+  ws.onclose = () => {
+    setWsStatus(false)
+    wsReconnectTimer = setTimeout(connectWs, 3000)
+  }
+
+  ws.onerror = () => {
+    ws.close()
+  }
+
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data)
+      handleWsMessage(msg)
+    } catch {}
+  }
+}
+
+function setWsStatus(connected) {
+  const dot = document.getElementById('ws-dot')
+  const label = document.getElementById('ws-label')
+  dot.className = `w-2 h-2 rounded-full pulse-dot ${connected ? 'bg-mc-green' : 'bg-gray-500'}`
+  label.textContent = connected ? 'Connected' : 'Disconnected'
+}
+
+function handleWsMessage(msg) {
+  switch (msg.type) {
+    case 'status': updateStatus(msg.data); break
+    case 'chat': appendChat(msg.data); break
+    case 'chatLog': msg.data.forEach(appendChat); break
+    case 'settings': populateSettings(msg.data); break
+    case 'connected': showActionMsg('Bot connected!', 'green'); break
+    case 'disconnected': showActionMsg(`Bot disconnected: ${msg.data?.reason ?? ''}`, 'red'); break
+    case 'kicked': showActionMsg(`Bot was kicked: ${msg.data?.reason ?? ''}`, 'red'); break
+    case 'error': showActionMsg(`Error: ${msg.data?.message ?? ''}`, 'red'); break
+    case 'afk':
+      afkEnabled = msg.data?.enabled ?? false
+      updateAfkButton()
+      break
+  }
+}
+
+// ─── Status ───────────────────────────────────────────────────────────────────
+function updateStatus(s) {
+  botOnline = s.online
+  const badge = document.getElementById('bot-badge')
+  badge.textContent = s.online ? 'ONLINE' : 'OFFLINE'
+  badge.className = `px-3 py-1 rounded-full text-xs font-bold ${s.online ? 'bg-mc-green text-black' : 'bg-gray-700 text-gray-400'}`
+
+  document.getElementById('stat-status').textContent = s.online ? '🟢 Online' : '🔴 Offline'
+  document.getElementById('stat-status').className = `text-2xl font-bold ${s.online ? 'text-mc-green' : 'text-gray-400'}`
+
+  if (s.online) {
+    document.getElementById('stat-health').textContent = `${s.health} / 20`
+    document.getElementById('health-bar').style.width = `${(s.health / 20) * 100}%`
+    document.getElementById('stat-food').textContent = `${s.food} / 20`
+    document.getElementById('food-bar').style.width = `${(s.food / 20) * 100}%`
+    document.getElementById('stat-ping').textContent = `${s.ping} ms`
+    document.getElementById('stat-position').textContent = s.position
+      ? `X: ${s.position.x}  Y: ${s.position.y}  Z: ${s.position.z}`
+      : '—'
+    document.getElementById('stat-dimension').textContent = s.dimension ?? '—'
+    document.getElementById('stat-gamemode').textContent = s.gameMode ?? '—'
+    document.getElementById('stat-server').textContent = `${s.serverIp}:${s.serverPort}`
+
+    // Uptime
+    uptimeStart = Date.now() - (s.uptime || 0)
+    if (!uptimeInterval) {
+      uptimeInterval = setInterval(updateUptime, 1000)
+    }
+  } else {
+    document.getElementById('stat-health').textContent = '—'
+    document.getElementById('health-bar').style.width = '0%'
+    document.getElementById('stat-food').textContent = '—'
+    document.getElementById('food-bar').style.width = '0%'
+    document.getElementById('stat-ping').textContent = '—'
+    document.getElementById('stat-position').textContent = '—'
+    document.getElementById('stat-dimension').textContent = '—'
+    document.getElementById('stat-gamemode').textContent = '—'
+    document.getElementById('stat-uptime').textContent = '—'
+    document.getElementById('stat-server').textContent = `${s.serverIp}:${s.serverPort}`
+    clearInterval(uptimeInterval)
+    uptimeInterval = null
+    uptimeStart = null
+  }
+}
+
+function updateUptime() {
+  if (!uptimeStart) return
+  const ms = Date.now() - uptimeStart
+  const s = Math.floor(ms / 1000)
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const sec = s % 60
+  document.getElementById('stat-uptime').textContent =
+    `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+}
+
+// ─── Bot controls ─────────────────────────────────────────────────────────────
+async function startBot() {
+  try {
+    const r = await fetch('/api/bot/start', { method: 'POST' })
+    const d = await r.json()
+    showActionMsg(d.message ?? d.error, r.ok ? 'green' : 'red')
+  } catch (e) { showActionMsg(e.message, 'red') }
+}
+
+async function stopBot() {
+  try {
+    const r = await fetch('/api/bot/stop', { method: 'POST' })
+    const d = await r.json()
+    showActionMsg(d.message ?? d.error, r.ok ? 'green' : 'red')
+  } catch (e) { showActionMsg(e.message, 'red') }
+}
+
+async function toggleAfk() {
+  afkEnabled = !afkEnabled
+  try {
+    await fetch('/api/bot/toggle-afk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: afkEnabled }),
+    })
+    updateAfkButton()
+  } catch (e) { showActionMsg(e.message, 'red') }
+}
+
+function updateAfkButton() {
+  const btn = document.getElementById('btn-afk')
+  btn.textContent = `🔄 AFK: ${afkEnabled ? 'ON' : 'OFF'}`
+  btn.className = `btn px-5 py-2 font-bold rounded hover:opacity-90 ${afkEnabled ? 'bg-mc-green text-black' : 'bg-mc-blue text-white'}`
+}
+
+function showActionMsg(msg, color) {
+  const el = document.getElementById('action-msg')
+  el.textContent = msg
+  el.className = `mt-3 text-xs ${color === 'green' ? 'text-mc-green' : 'text-mc-red'}`
+  el.classList.remove('hidden')
+  clearTimeout(el._timer)
+  el._timer = setTimeout(() => el.classList.add('hidden'), 5000)
+}
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+function appendChat(entry) {
+  const log = document.getElementById('chat-log')
+  const div = document.createElement('div')
+  const time = new Date(entry.timestamp).toLocaleTimeString()
+  div.innerHTML = `<span class="text-gray-500">[${time}]</span> <span class="text-mc-yellow font-bold">${escHtml(entry.username)}</span><span class="text-gray-400">:</span> <span class="text-gray-200">${escHtml(entry.message)}</span>`
+  log.appendChild(div)
+  log.scrollTop = log.scrollHeight
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input')
+  const msg = input.value.trim()
+  if (!msg) return
+  input.value = ''
+  try {
+    const r = await fetch('/api/bot/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg }),
+    })
+    if (!r.ok) {
+      const d = await r.json()
+      showActionMsg(d.error, 'red')
+    }
+  } catch (e) { showActionMsg(e.message, 'red') }
+}
+
+// ─── Controls ─────────────────────────────────────────────────────────────────
+async function control(action, duration = 500) {
+  try {
+    await fetch('/api/bot/control', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, duration }),
+    })
+  } catch (e) { showActionMsg(e.message, 'red') }
+}
+
+function controlCustom(action) {
+  const dur = parseInt(document.getElementById('ctrl-duration').value, 10) || 500
+  control(action, dur)
+}
+
+async function sendChatFromControl() {
+  const input = document.getElementById('ctrl-chat')
+  const msg = input.value.trim()
+  if (!msg) return
+  input.value = ''
+  try {
+    await fetch('/api/bot/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg }),
+    })
+  } catch (e) { showActionMsg(e.message, 'red') }
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+async function loadSettings() {
+  try {
+    const r = await fetch('/api/bot/settings')
+    const d = await r.json()
+    populateSettings(d)
+  } catch (e) { console.error(e) }
+}
+
+function populateSettings(s) {
+  const form = document.getElementById('settings-form')
+  for (const [k, v] of Object.entries(s)) {
+    const el = form.elements[k]
+    if (!el) continue
+    if (el.type === 'checkbox') el.checked = Boolean(v)
+    else el.value = v
+  }
+}
+
+async function saveSettings(e) {
+  e.preventDefault()
+  const form = document.getElementById('settings-form')
+  const data = {}
+  for (const el of form.elements) {
+    if (!el.name) continue
+    if (el.type === 'checkbox') data[el.name] = el.checked
+    else if (el.type === 'number') data[el.name] = Number(el.value)
+    else data[el.name] = el.value
+  }
+  try {
+    const r = await fetch('/api/bot/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    const msg = document.getElementById('settings-msg')
+    msg.textContent = r.ok ? '✓ Settings saved' : '✗ Failed to save'
+    msg.className = `text-xs ${r.ok ? 'text-mc-green' : 'text-mc-red'}`
+    msg.classList.remove('hidden')
+    setTimeout(() => msg.classList.add('hidden'), 3000)
+  } catch (e) { console.error(e) }
+}
+
+// ─── AI Chat ──────────────────────────────────────────────────────────────────
+async function loadConversations() {
+  try {
+    const r = await fetch('/api/openai/conversations')
+    conversations = await r.json()
+    renderConvList()
+  } catch (e) { console.error(e) }
+}
+
+function renderConvList() {
+  const list = document.getElementById('conv-list')
+  list.innerHTML = ''
+  for (const c of conversations) {
+    const div = document.createElement('div')
+    div.className = `px-3 py-2 rounded cursor-pointer text-sm truncate transition-colors ${c.id === currentConvId ? 'bg-mc-accent text-white' : 'text-gray-300 hover:bg-gray-700'}`
+    div.textContent = c.title
+    div.onclick = () => openConversation(c.id)
+    list.appendChild(div)
+  }
+}
+
+async function newConversation() {
+  const title = prompt('Conversation title:', 'New Conversation')
+  if (!title) return
+  try {
+    const r = await fetch('/api/openai/conversations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    })
+    const c = await r.json()
+    conversations.unshift(c)
+    renderConvList()
+    openConversation(c.id)
+  } catch (e) { console.error(e) }
+}
+
+async function openConversation(id) {
+  currentConvId = id
+  renderConvList()
+  try {
+    const r = await fetch(`/api/openai/conversations/${id}`)
+    const data = await r.json()
+    document.getElementById('conv-title').textContent = data.title
+    document.getElementById('btn-del-conv').classList.remove('hidden')
+    const msgs = document.getElementById('ai-messages')
+    msgs.innerHTML = ''
+    for (const m of data.messages ?? []) {
+      appendAiMessage(m.role, m.content)
+    }
+  } catch (e) { console.error(e) }
+}
+
+async function deleteConversation() {
+  if (!currentConvId) return
+  if (!confirm('Delete this conversation?')) return
+  try {
+    await fetch(`/api/openai/conversations/${currentConvId}`, { method: 'DELETE' })
+    conversations = conversations.filter(c => c.id !== currentConvId)
+    currentConvId = null
+    document.getElementById('conv-title').textContent = 'Select a conversation'
+    document.getElementById('btn-del-conv').classList.add('hidden')
+    document.getElementById('ai-messages').innerHTML = ''
+    renderConvList()
+  } catch (e) { console.error(e) }
+}
+
+function appendAiMessage(role, content, streaming = false) {
+  const msgs = document.getElementById('ai-messages')
+  const div = document.createElement('div')
+  div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`
+  const bubble = document.createElement('div')
+  bubble.className = `max-w-[80%] px-4 py-2 rounded-lg text-sm whitespace-pre-wrap ${
+    role === 'user'
+      ? 'bg-mc-accent text-white'
+      : 'bg-gray-700 text-gray-100'
+  } ${streaming ? 'sse-cursor' : ''}`
+  bubble.textContent = content
+  div.appendChild(bubble)
+  msgs.appendChild(div)
+  msgs.scrollTop = msgs.scrollHeight
+  return bubble
+}
+
+async function sendAiMessage() {
+  if (!currentConvId) { alert('Select or create a conversation first.'); return }
+  const input = document.getElementById('ai-input')
+  const content = input.value.trim()
+  if (!content) return
+  input.value = ''
+  document.getElementById('btn-ai-send').disabled = true
+
+  appendAiMessage('user', content)
+  const assistantBubble = appendAiMessage('assistant', '', true)
+
+  try {
+    const r = await fetch(`/api/openai/conversations/${currentConvId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    })
+
+    const reader = r.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        try {
+          const payload = JSON.parse(line.slice(6))
+          if (payload.delta) {
+            assistantBubble.textContent += payload.delta
+            document.getElementById('ai-messages').scrollTop = document.getElementById('ai-messages').scrollHeight
+          }
+          if (payload.done) {
+            assistantBubble.classList.remove('sse-cursor')
+          }
+          if (payload.error) {
+            assistantBubble.textContent = `Error: ${payload.error}`
+            assistantBubble.classList.remove('sse-cursor')
+          }
+        } catch {}
+      }
+    }
+  } catch (e) {
+    assistantBubble.textContent = `Error: ${e.message}`
+    assistantBubble.classList.remove('sse-cursor')
+  } finally {
+    document.getElementById('btn-ai-send').disabled = false
+  }
+}
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.className = b === btn ? 'tab-btn tab-active py-3 text-sm font-medium' : 'tab-btn tab-inactive py-3 text-sm font-medium'
+    })
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'))
+    document.getElementById(`tab-${tab}`).classList.remove('hidden')
+    if (tab === 'ai') loadConversations()
+  })
+})
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+connectWs()
+loadSettings()
+
+// Poll status every 10s as fallback
+setInterval(async () => {
+  try {
+    const r = await fetch('/api/bot/status')
+    const d = await r.json()
+    updateStatus(d)
+  } catch {}
+}, 10000)
+</script>
+</body>
+</html>
