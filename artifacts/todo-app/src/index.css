@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(224 50% 6%);
+  --primary: hsl(172 90% 45%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', 'Space Grotesk', sans-serif;
+  background-color: var(--background);
+  color: #e0e0e0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: 'Space Mono', 'Fira Code', monospace;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(172 90% 45% / 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(172 90% 45% / 0.7);
+}
+
+/* Focus visible */
+:focus-visible {
+  outline: 2px solid hsl(172 90% 45%);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions */
+button,
+input,
+select,
+textarea {
+  transition: all 0.2s ease;
+}
